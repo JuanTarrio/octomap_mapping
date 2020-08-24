@@ -28,6 +28,7 @@
  */
 
 #include <octomap_server/OctomapServer.h>
+#include <fstream>
 
 using namespace octomap;
 using octomap_msgs::Octomap;
@@ -343,13 +344,19 @@ void OctomapServer::insertCloudCallback(const sensor_msgs::PointCloud2::ConstPtr
     pc_nonground.header = pc.header;
   }
 
+  ros::WallTime integrationStartTime = ros::WallTime::now();
 
   insertScan(sensorToWorldTf.getOrigin(), pc_ground, pc_nonground);
 
   double total_elapsed = (ros::WallTime::now() - startTime).toSec();
-  ROS_DEBUG("Pointcloud insertion in OctomapServer done (%zu+%zu pts (ground/nonground), %f sec)", pc_ground.size(), pc_nonground.size(), total_elapsed);
+  double integration_elapsed = (ros::WallTime::now() - integrationStartTime).toSec();
+  ROS_INFO("Pointcloud insertion in OctomapServer done (%zu+%zu pts (ground/nonground), %f sec, int %f sec)", pc_ground.size(), pc_nonground.size(), 
+           total_elapsed, integration_elapsed);
 
   publishAll(cloud->header.stamp);
+
+  static std::ofstream timings_file("timings_octomap.txt");
+  timings_file << integration_elapsed << "\n";
 }
 
 void OctomapServer::insertScan(const tf::Point& sensorOriginTf, const PCLPointCloud& ground, const PCLPointCloud& nonground){
